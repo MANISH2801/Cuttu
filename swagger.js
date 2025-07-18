@@ -1,4 +1,5 @@
-// swagger.js
+// swagger/swaggerSpec.js
+
 const swaggerJSDoc = require('swagger-jsdoc');
 
 const options = {
@@ -7,11 +8,25 @@ const options = {
     info: {
       title: 'Prep360 API Docs',
       version: '1.0.0',
-      description: 'API documentation for Prep360 backend',
+      description: 'Swagger documentation for Prep360 backend',
     },
-    servers: [{ url: 'http://localhost:3000' }],
+    servers: [
+      {
+        url: 'https://your-domain.com', // Replace with real domain when deployed
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
-  apis: ['./server.js', './routes/*.js'], // <- Update this if needed
+  apis: ['./routes/*.js'], // All route files with Swagger comments
 };
 
 const swaggerSpec = swaggerJSDoc(options);
