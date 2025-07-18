@@ -18,11 +18,14 @@ const enrollmentRoutes= require('./routes/enrollments');
 const videosRoutes    = require('./routes/videos');
 const dashboardRoutes = require('./routes/dashboard');
 const deviceLock      = require('./middleware/deviceLock');
-
+const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'https://prep360-shonu-cuttu.netlify.app',
+  credentials: true
+}));
 // ─────────── REUSABLE MIDDLEWARE ───────────
 /* ✔ Generic JWT guard */
 function auth (req, res, next) {
