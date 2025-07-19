@@ -164,7 +164,8 @@ app.post('/register', async (req, res) => {
   }
 
   const { username, email, password } = value;
-  const user_type = 'student'; // Must match your CHECK CONSTRAINT exactly
+  const user_type = 'normal'; // ✅ allowed by DB
+ // Must match your CHECK CONSTRAINT exactly
 
   try {
     const existing = await pool.query('SELECT 1 FROM users WHERE email=$1', [email]);
