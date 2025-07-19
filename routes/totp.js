@@ -66,7 +66,12 @@ router.post('/verify', async (req, res) => {
 
     if (!verified) return res.status(401).json({ error: 'Invalid token' });
 
-    await pool.query('UPDATE users SET totp_enabled=true WHERE id=$1', [req.user.id]);
+    // ✅ Update both totp_enabled and is_verified
+    await pool.query(
+      'UPDATE users SET totp_enabled = true, is_verified = true WHERE id = $1',
+      [req.user.id]
+    );
+
     res.json({ message: '2FA enabled ✅' });
   } catch (err) {
     console.error('[2FA verify]', err);

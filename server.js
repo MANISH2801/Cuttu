@@ -233,7 +233,6 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
   const { email, password, device_id } = req.body;
 
-  // Step 1: Basic validation
   if (!email || !password || !device_id) {
     return res
       .status(400)
@@ -241,41 +240,24 @@ app.post('/login', async (req, res) => {
   }
 
   try {
-    // Step 2: Fetch user by email
-    const { rows } = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
+    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = rows[0];
 
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+
+    if (!user.is_verified) {
+      return res.status(403).json({ error: 'Account not verified. Please verify your email or contact admin.' });
     }
 
-    // ✅ STEP 3: Verify password
-const ok = await bcrypt.compare(password, user.password);
-if (!ok) {
-  return res.status(401).json({ error: 'Invalid credentials' });
-}
-
-// ✅ STEP 3.5: Check if user is verified
-if (!user.is_verified) {
-  return res.status(403).json({ error: 'Account not verified. Please verify your email or contact admin.' });
-}
-
-
-    // Step 4: Mark login and update device ID
     await pool.query(
-      `UPDATE users
-       SET is_logged_in = true,
-           device_id = $1
-       WHERE id = $2`,
+      `UPDATE users SET is_logged_in = true, device_id = $1 WHERE id = $2`,
       [device_id, user.id]
     );
 
-    // Step 5: Create and return JWT + user info
-    const token = // 🛡️  Attach device ID to payload if provided
-  jwt.sign(
+    const token = jwt.sign(
       { id: user.id, device_id },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -292,6 +274,7 @@ if (!user.is_verified) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 /* ---------- LOGOUT ---------- */
 /**
