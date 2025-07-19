@@ -33,15 +33,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MANISH2801/prep360-backend-live.git"
+    "url": "git+https://github.com/MANISH2801/Cuttu"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/MANISH2801/prep360-backend-live/issues"
+    "url": "https://github.com/MANISH2801/Cuttu"
   },
-  "homepage": "https://github.com/MANISH2801/prep360-backend-live#readme",
+  "homepage": "https://github.com/MANISH2801/Cuttu#readme",
   "engines": {
     "node": ">=18.0.0"
   }

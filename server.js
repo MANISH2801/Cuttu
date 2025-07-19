@@ -182,7 +182,8 @@ app.post('/register', async (req, res) => {
     res.status(201).json({ message: '✅ Registration successful', user: rows[0] });
 
   } catch (err) {
-    console.error("❌ Registration Error:", err);
+    console.error("❌ Registration Error:", err.message, err.stack);
+
     res.status(500).json({ error: 'Internal server error' });
   }
 });
