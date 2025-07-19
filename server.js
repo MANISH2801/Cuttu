@@ -153,28 +153,39 @@ app.get('/users', async (_req, res) => {
  */
 app.post('/register', async (req, res) => {
   const schema = Joi.object({
+    username: Joi.string().min(3).max(30).required(),
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required()
   });
+
   const { error, value } = schema.validate(req.body);
   if (error) return res.status(400).json({ error: error.details[0].message });
 
-  const { email, password } = value;
+  const { username, email, password } = value;
+
   try {
     const dup = await pool.query('SELECT 1 FROM users WHERE email=$1', [email]);
-    if (dup.rowCount) return res.status(409).json({ error: 'E‑mail already exists' });
+    if (dup.rowCount) {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
 
     const hash = await bcrypt.hash(password, 12);
-    const { rows } = await pool.query(`
-      INSERT INTO users (email, password, role)
-      VALUES ($1,$2,'normal')
-      RETURNING id,email,role,is_verified,is_logged_in,created_at`,
-      [email, hash]);
-    res.status(201).json({ message: 'Registration successful ✅', user: rows[0] });
+
+    const { rows } = await pool.query(
+      `INSERT INTO users (username, email, password, role)
+       VALUES ($1, $2, $3, 'normal')
+       RETURNING id, username, email, role, is_verified, is_logged_in, created_at`,
+      [username, email, hash]
+    );
+
+    res.status(201).json({ message: '✅ Registration successful', user: rows[0] });
+
   } catch (err) {
+    console.error("❌ Registration Error:", err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 /* ---------- LOGIN ---------- */
 /**
