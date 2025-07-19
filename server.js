@@ -162,6 +162,7 @@ app.post('/register', async (req, res) => {
   if (error) return res.status(400).json({ error: error.details[0].message });
 
   const { username, email, password } = value;
+  const user_type = 'student';
 
   try {
     const dup = await pool.query('SELECT 1 FROM users WHERE email=$1', [email]);
@@ -172,10 +173,10 @@ app.post('/register', async (req, res) => {
     const hash = await bcrypt.hash(password, 12);
 
     const { rows } = await pool.query(
-      `INSERT INTO users (username, email, password, role)
-       VALUES ($1, $2, $3, 'normal')
+      `INSERT INTO users (username, email, password, role, user_type)
+       VALUES ($1, $2, $3, 'normal', $4)
        RETURNING id, username, email, role, is_verified, is_logged_in, created_at`,
-      [username, email, hash]
+      [username, email, hash, user_type]
     );
 
     res.status(201).json({ message: '✅ Registration successful', user: rows[0] });
@@ -185,6 +186,7 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 /* ---------- LOGIN ---------- */
