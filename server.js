@@ -220,11 +220,17 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // ✅ STEP 3: Verify password (👉 paste here)
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+    // ✅ STEP 3: Verify password
+const ok = await bcrypt.compare(password, user.password);
+if (!ok) {
+  return res.status(401).json({ error: 'Invalid credentials' });
+}
+
+// ✅ STEP 3.5: Check if user is verified
+if (!user.is_verified) {
+  return res.status(403).json({ error: 'Account not verified. Please verify your email or contact admin.' });
+}
+
 
     // Step 4: Mark login and update device ID
     await pool.query(
@@ -344,7 +350,7 @@ app.get('/courses', async (_req, res) => {
  */
 app.get('/courses/:id', auth, async (req, res) => {
   const courseId = req.params.id;
-  const userId   = req.user_id;
+  const userId = req.user.id;
 
   try {
     const { rows: courseRows } = await pool.query(
