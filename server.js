@@ -159,34 +159,51 @@ app.post('/register', async (req, res) => {
   });
 
   const { error, value } = schema.validate(req.body);
-  if (error) return res.status(400).json({ error: error.details[0].message });
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
 
   const { username, email, password } = value;
-  const user_type = 'student';
+  const user_type = 'student'; // Must match your CHECK CONSTRAINT exactly
 
   try {
-    const dup = await pool.query('SELECT 1 FROM users WHERE email=$1', [email]);
-    if (dup.rowCount) {
+    const existing = await pool.query('SELECT 1 FROM users WHERE email=$1', [email]);
+    if (existing.rowCount > 0) {
       return res.status(409).json({ error: 'Email already exists' });
     }
 
-    const hash = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    const { rows } = await pool.query(
-      `INSERT INTO users (username, email, password, role, user_type)
-       VALUES ($1, $2, $3, 'normal', $4)
-       RETURNING id, username, email, role, is_verified, is_logged_in, created_at`,
-      [username, email, hash, user_type]
-    );
+    const insertQuery = `
+      INSERT INTO users (username, email, password, role, user_type)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, username, email, role, is_verified, is_logged_in, user_type
+    `;
 
-    res.status(201).json({ message: '✅ Registration successful', user: rows[0] });
+    const { rows } = await pool.query(insertQuery, [
+      username,
+      email,
+      hashedPassword,
+      'normal',
+      user_type
+    ]);
+
+    res.status(201).json({
+      message: '✅ Registration successful',
+      user: rows[0]
+    });
 
   } catch (err) {
-    console.error("❌ Registration Error:", err.message, err.stack);
-
+    console.error("❌ Registration Error:", err.message);
+    if (err.code === '23514') { // PostgreSQL CHECK constraint violation
+      return res.status(400).json({
+        error: 'Invalid user_type: must be one of the allowed values'
+      });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 
