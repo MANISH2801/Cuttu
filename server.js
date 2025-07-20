@@ -260,10 +260,14 @@ app.post('/login', async (req, res) => {
       totp_secret_exists: !!user.totp_secret
     });
 
-    // 🚫 If TOTP secret exists but not verified
-    if (!user.is_verified && user.totp_secret) {
-      console.log("⚠️ User not verified but has TOTP. Blocking login.");
-      return res.status(403).json({ message: "Account not verified. Please verify your email or contact admin" });
+    // If user has TOTP and is NOT verified, block further
+    if (user.totp_secret && !user.is_verified) {
+      console.log("⚠️ TOTP secret exists but user not verified. 2FA required.");
+      return res.json({
+        message: "2FA required",
+        requires_2fa: true,
+        user_id: user.id
+      });
     }
 
     await pool.query(
@@ -280,7 +284,12 @@ app.post('/login', async (req, res) => {
 
     console.log("✅ Login successful:", { id: user.id });
 
-    res.json({ message: 'Login successful ✅', token, user: safeUser });
+    res.json({
+      message: 'Login successful ✅',
+      token,
+      requires_2fa: false,
+      user: safeUser
+    });
 
   } catch (err) {
     console.error("🔥 Login error:", err);
