@@ -251,16 +251,33 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // If TOTP is enabled and user is NOT verified, don't issue token
+    // 🆕 If user has no TOTP setup, generate one
+    if (!user.totp_secret) {
+      const secret = speakeasy.generateSecret({
+        name: `Prep360 (${user.email})`
+      });
+
+      await pool.query(
+        'UPDATE users SET totp_secret=$1, totp_enabled=false, is_verified=false WHERE id=$2',
+        [secret.base32, user.id]
+      );
+
+      user.totp_secret = secret.base32; // store it for current flow
+      user.totp_enabled = false;
+      user.is_verified = false;
+    }
+
+    // 🔒 If TOTP is enabled and user not verified → ask for 2FA
     if (user.totp_enabled && !user.is_verified) {
       return res.json({
         message: "2FA required",
         requires_2fa: true,
-        user_id: user.id
+        token: jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '10m' }),
+        user: { id: user.id, email: user.email }
       });
     }
 
-    // If TOTP is NOT enabled, or user is verified → proceed with login
+    // ✅ Continue login
     await pool.query(
       `UPDATE users SET is_logged_in = true, device_id = $1 WHERE id = $2`,
       [device_id, user.id]
