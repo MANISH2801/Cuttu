@@ -232,60 +232,61 @@ app.post('/register', async (req, res) => {
  */
 app.post('/login', async (req, res) => {
   const { email, password, device_id } = req.body;
+  console.log("➡️ Login attempt:", { email, device_id });
 
   if (!email || !password || !device_id) {
-    return res
-      .status(400)
-      .json({ error: 'email, password and device_id are required' });
+    console.log("⛔ Missing credentials");
+    return res.status(400).json({ error: 'email, password and device_id are required' });
   }
 
   try {
     const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = rows[0];
 
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) {
+      console.log("❌ User not found");
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
     const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!ok) {
+      console.log("❌ Password mismatch");
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
-    // ✅ Insert this to debug and fix the account verification logic
-  console.log("User status:", { is_verified: user.is_verified, totp_secret: !!user.totp_secret });
+    console.log("🟢 User found:", {
+      id: user.id,
+      is_verified: user.is_verified,
+      totp_secret_exists: !!user.totp_secret
+    });
 
-  if (!user.is_verified && user.totp_secret) {
-    return res.status(403).json({ message: "Account not verified. Please verify your email or contact admin" });
-  }
+    // 🚫 If TOTP secret exists but not verified
+    if (!user.is_verified && user.totp_secret) {
+      console.log("⚠️ User not verified but has TOTP. Blocking login.");
+      return res.status(403).json({ message: "Account not verified. Please verify your email or contact admin" });
+    }
 
     await pool.query(
       `UPDATE users SET is_logged_in = true, device_id = $1 WHERE id = $2`,
       [device_id, user.id]
     );
 
-    const token = jwt.sign(
-  { id: user.id, device_id },
-  JWT_SECRET,
-  { expiresIn: '7d' }
-);
+    const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '7d' });
 
-// ❌ Old (causes error):
-// delete user.password;
-// user.is_logged_in = true;
-// user.device_id = device_id;
+    const safeUser = { ...user };
+    delete safeUser.password;
+    safeUser.is_logged_in = true;
+    safeUser.device_id = device_id;
 
-// ✅ New (safe version):
-const safeUser = { ...user };
-delete safeUser.password;
-safeUser.is_logged_in = true;
-safeUser.device_id = device_id;
+    console.log("✅ Login successful:", { id: user.id });
 
-res.json({ message: 'Login successful ✅', token, user: safeUser });
-
+    res.json({ message: 'Login successful ✅', token, user: safeUser });
 
   } catch (err) {
-    console.error('Login error:', err);
+    console.error("🔥 Login error:", err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 /* ---------- LOGOUT ---------- */
 /**
