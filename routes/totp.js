@@ -17,31 +17,6 @@ const router = express.Router();
 router.use(authenticate);
 
 /**
- * POST /auth/2fa/setup
- * Generates a secret & QR for Google Authenticator.
- */
-router.post('/setup', async (req, res) => {
-  try {
-    const secret = speakeasy.generateSecret({
-      name: `Prep360 (${req.user.email})`
-    });
-
-    await pool.query(
-      'UPDATE users SET totp_secret=$1, totp_enabled=false WHERE id=$2',
-      [secret.base32, req.user.id]
-    );
-
-    const otpauth  = secret.otpauth_url;
-    const qrDataUrl = await QRCode.toDataURL(otpauth);
-
-    res.json({ otpauth, qrDataUrl });
-  } catch (err) {
-    console.error('[2FA setup]', err);
-    res.status(500).json({ error: 'Unable to generate 2FA secret' });
-  }
-});
-
-/**
  * POST /auth/2fa/verify
  * Body: { token }
  */

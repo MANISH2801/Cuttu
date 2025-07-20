@@ -251,35 +251,37 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // 🆕 If user has no TOTP setup, generate one
+    // 🔐 If no TOTP secret → Generate new secret & QR
     if (!user.totp_secret) {
-      const secret = speakeasy.generateSecret({
-        name: `Prep360 (${user.email})`
-      });
-
+      const secret = speakeasy.generateSecret({ name: `Prep360 (${user.email})` });
       await pool.query(
-        'UPDATE users SET totp_secret=$1, totp_enabled=false, is_verified=false WHERE id=$2',
+        'UPDATE users SET totp_secret = $1, totp_enabled = false, is_verified = false WHERE id = $2',
         [secret.base32, user.id]
       );
-
-      user.totp_secret = secret.base32; // store it for current flow
-      user.totp_enabled = false;
-      user.is_verified = false;
+      user.totp_secret = secret.base32;
     }
 
-    // 🔒 If TOTP is enabled and user not verified → ask for 2FA
-    if (user.totp_enabled && !user.is_verified) {
+    // ❌ If 2FA required but not verified, skip login and redirect to verify
+    if (user.totp_secret && !user.is_verified) {
+      const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '10m' });
+
       return res.json({
-        message: "2FA required",
+        message: '2FA required',
         requires_2fa: true,
-        token: jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '10m' }),
-        user: { id: user.id, email: user.email }
+        token, // unverified token for verification
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          user_type: user.user_type,
+          role: user.role
+        }
       });
     }
 
-    // ✅ Continue login
+    // ✅ Fully verified, issue token
     await pool.query(
-      `UPDATE users SET is_logged_in = true, device_id = $1 WHERE id = $2`,
+      'UPDATE users SET is_logged_in = true, device_id = $1 WHERE id = $2',
       [device_id, user.id]
     );
 
@@ -287,8 +289,6 @@ app.post('/login', async (req, res) => {
 
     const safeUser = { ...user };
     delete safeUser.password;
-    safeUser.is_logged_in = true;
-    safeUser.device_id = device_id;
 
     return res.json({
       message: 'Login successful ✅',
@@ -298,10 +298,11 @@ app.post('/login', async (req, res) => {
     });
 
   } catch (err) {
-    console.error("🔥 Login error:", err);
+    console.error('🔥 Login error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 
