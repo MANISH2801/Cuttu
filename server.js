@@ -253,24 +253,10 @@ app.post('/login', async (req, res) => {
       console.log("❌ Password mismatch");
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    
-    // If user has 2FA enabled, reset is_verified to false on new login
-    if (user.totp_secret && user.totp_enabled) {
-      await pool.query(
-        'UPDATE users SET is_verified = false WHERE id = $1',
-        [user.id]
-      );
-    }
 
-    console.log("🟢 User found:", {
-      id: user.id,
-      is_verified: user.is_verified,
-      totp_secret_exists: !!user.totp_secret
-    });
-
-    // If user has TOTP and is NOT verified, block further
-    if (user.totp_secret && !user.is_verified) {
-      console.log("⚠️ TOTP secret exists but user not verified. 2FA required.");
+    // If 2FA is enabled and user is not verified → do not issue token
+    if (user.totp_secret && user.totp_enabled && !user.is_verified) {
+      console.log("⚠️ 2FA required before login");
       return res.json({
         message: "2FA required",
         requires_2fa: true,
@@ -278,9 +264,10 @@ app.post('/login', async (req, res) => {
       });
     }
 
+    // ✅ Allow login (2FA either not enabled or already verified)
     await pool.query(
-      `UPDATE users SET is_logged_in = true, device_id = $1 WHERE id = $2`,
-      [device_id, user.id]
+      `UPDATE users SET is_logged_in = true, device_id = $1, is_verified = $2 WHERE id = $3`,
+      [device_id, user.totp_enabled ? true : false, user.id]
     );
 
     const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '7d' });
@@ -292,7 +279,7 @@ app.post('/login', async (req, res) => {
 
     console.log("✅ Login successful:", { id: user.id });
 
-    res.json({
+    return res.json({
       message: 'Login successful ✅',
       token,
       requires_2fa: false,
@@ -301,9 +288,10 @@ app.post('/login', async (req, res) => {
 
   } catch (err) {
     console.error("🔥 Login error:", err);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 /* ---------- LOGOUT ---------- */
 /**
