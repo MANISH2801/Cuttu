@@ -24,60 +24,38 @@ const cors = require('cors');
 const app = express();
 app.use(express.json());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://prep360-shonu-cuttu.netlify.app',
+  origin: process.env.FRONTEND_URL || 'https://boisterous-liger-61259d.netlify.app',
   credentials: true
 }));
 // ─────────── REUSABLE MIDDLEWARE ───────────
-/* ✔ Generic JWT guard */
-function auth (req, res, next) {
-  const hdr   = req.headers.authorization || '';
-    // Step 4.5: If TOTP is enabled, verify token
-    if (user.totp_enabled) {
-      const totpToken = req.body.totp;
-      if (!totpToken) return res.status(401).json({ error: 'TOTP token required' });
-      const speakeasy = require('speakeasy');
-      const validTOTP = speakeasy.totp.verify({
-        secret: user.totp_secret,
-        encoding: 'base32',
-        token: totpToken
-      });
-      if (!validTOTP) return res.status(401).json({ error: 'Invalid TOTP token' });
-    }
-
-    // Step 5: Create and return JWT + user info
-    const token = jwt.sign(
-      { id: user.id, device_id },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-
+function auth(req, res, next) {
+  const hdr = req.headers.authorization || '';
+  const token = hdr.split(' ')[1]; // Bearer <token>
   if (!token) return res.status(401).json({ error: 'No token provided' });
 
   try {
-    req.user = jwt.verify(token, JWT_SECRET); // { id, role }
+    req.user = jwt.verify(token, JWT_SECRET); // { id, device_id }
     next();
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid / expired token' });
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
-/* ✔ Admin‑only */
-function requireAdmin (req, res, next) {
+function requireAdmin(req, res, next) {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin only' });
   }
   next();
 }
 
-/* ✔ The logged‑in user *or* an admin */
-function requireSelfOrAdmin (paramKey = 'user_id') {
+function requireSelfOrAdmin(paramKey = 'user_id') {
   return (req, res, next) => {
     const target = +req.params[paramKey] || +req.body[paramKey];
     if (req.user.role === 'admin' || req.user.id === target) return next();
     return res.status(403).json({ error: 'Not allowed' });
   };
 }
+
 
 // ─────────── SWAGGER TAGS (top‑level) ───────────
 /**
@@ -276,7 +254,6 @@ app.post('/login', async (req, res) => {
           username: user.username,
           user_type: user.user_type,
           role: user.role,
-          totp_secret: user.totp_secret // ✅ send secret to frontend
         }
       });
     }
@@ -290,7 +267,7 @@ app.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '7d' });
 
     const safeUser = { ...user };
-    delete safeUser.password;
+delete safeUser.password;
 
     return res.json({
       message: 'Login successful ✅',
