@@ -248,9 +248,12 @@ app.post('/login', async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
-    if (!user.is_verified) {
-      return res.status(403).json({ error: 'Account not verified. Please verify your email or contact admin.' });
-    }
+    // ✅ Insert this to debug and fix the account verification logic
+  console.log("User status:", { is_verified: user.is_verified, totp_secret: !!user.totp_secret });
+
+  if (!user.is_verified && user.totp_secret) {
+    return res.status(403).json({ message: "Account not verified. Please verify your email or contact admin" });
+  }
 
     await pool.query(
       `UPDATE users SET is_logged_in = true, device_id = $1 WHERE id = $2`,
