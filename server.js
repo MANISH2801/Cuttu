@@ -235,7 +235,6 @@ app.post('/login', async (req, res) => {
   console.log("➡️ Login attempt:", { email, device_id });
 
   if (!email || !password || !device_id) {
-    console.log("⛔ Missing credentials");
     return res.status(400).json({ error: 'email, password and device_id are required' });
   }
 
@@ -244,19 +243,16 @@ app.post('/login', async (req, res) => {
     const user = rows[0];
 
     if (!user) {
-      console.log("❌ User not found");
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
-      console.log("❌ Password mismatch");
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // If 2FA is enabled and user is not verified → do not issue token
-    if (user.totp_secret && user.totp_enabled && !user.is_verified) {
-      console.log("⚠️ 2FA required before login");
+    // If TOTP is enabled and user is NOT verified, don't issue token
+    if (user.totp_enabled && !user.is_verified) {
       return res.json({
         message: "2FA required",
         requires_2fa: true,
@@ -264,10 +260,10 @@ app.post('/login', async (req, res) => {
       });
     }
 
-    // ✅ Allow login (2FA either not enabled or already verified)
+    // If TOTP is NOT enabled, or user is verified → proceed with login
     await pool.query(
-      `UPDATE users SET is_logged_in = true, device_id = $1, is_verified = $2 WHERE id = $3`,
-      [device_id, user.totp_enabled ? true : false, user.id]
+      `UPDATE users SET is_logged_in = true, device_id = $1 WHERE id = $2`,
+      [device_id, user.id]
     );
 
     const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '7d' });
@@ -276,8 +272,6 @@ app.post('/login', async (req, res) => {
     delete safeUser.password;
     safeUser.is_logged_in = true;
     safeUser.device_id = device_id;
-
-    console.log("✅ Login successful:", { id: user.id });
 
     return res.json({
       message: 'Login successful ✅',
@@ -291,6 +285,7 @@ app.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 /* ---------- LOGOUT ---------- */
