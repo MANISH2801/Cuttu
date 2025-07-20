@@ -19,6 +19,7 @@ const videosRoutes    = require('./routes/videos');
 const dashboardRoutes = require('./routes/dashboard');
 const deviceLock      = require('./middleware/deviceLock');
 const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
 const cors = require('cors');
 
 const app = express();
@@ -28,6 +29,22 @@ app.use(cors({
   credentials: true
 }));
 
+
+// ─────────── SWAGGER TAGS (top‑level) ───────────
+/**
+ * @swagger
+ * tags:
+ *   - name: Auth
+ *     description: Authentication & session
+ *   - name: Users
+ *     description: User records
+ *   - name: Courses
+ *     description: Course catalogue (admin write)
+ *   - name: Enrollments
+ *     description: Course enrollments
+ */
+
+// ─────────────────── ROUTES ───────────────────
 // ─────────── REUSABLE MIDDLEWARE ───────────
 function auth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -46,21 +63,22 @@ function auth(req, res, next) {
   }
 }
 
-// ─────────── SWAGGER TAGS (top‑level) ───────────
-/**
- * @swagger
- * tags:
- *   - name: Auth
- *     description: Authentication & session
- *   - name: Users
- *     description: User records
- *   - name: Courses
- *     description: Course catalogue (admin write)
- *   - name: Enrollments
- *     description: Course enrollments
- */
+// ✔ Admin‑only
+function requireAdmin(req, res, next) {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+  next();
+}
 
-// ─────────────────── ROUTES ───────────────────
+// ✔ The logged‑in user *or* an admin
+function requireSelfOrAdmin(paramKey = 'user_id') {
+  return (req, res, next) => {
+    const target = +req.params[paramKey] || +req.body[paramKey];
+    if (req.user.role === 'admin' || req.user.id === target) return next();
+    return res.status(403).json({ error: 'Not allowed' });
+  };
+}
 
 /**
  * @swagger
@@ -219,9 +237,6 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // 🔐 If no TOTP secret → Generate new secret & QR
-    const qrcode = require('qrcode'); // make sure this is at top of server.js
-
 // Inside /login route:
 if (!user.totp_secret) {
   const secret = speakeasy.generateSecret({ name: `Prep360 (${user.email})` });
@@ -232,34 +247,6 @@ if (!user.totp_secret) {
   user.totp_secret = secret.base32;
 }
 
-// ❌ If 2FA required but not verified
-if (user.totp_secret && !user.is_verified) {
-  const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '10m' });
-
-  // ✅ Generate OTP URL and QR Code
-  const otpURL = speakeasy.otpauthURL({
-    secret: user.totp_secret,
-    label: `Prep360 (${user.email})`,
-    issuer: 'Prep360',
-    encoding: 'base32'
-  });
-
-  const qrImageUrl = await qrcode.toDataURL(otpURL);
-
-  return res.json({
-    message: '2FA required',
-    requires_2fa: true,
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      user_type: user.user_type,
-      role: user.role,
-    },
-    qr_image_url: qrImageUrl  // ✅ Add this to your frontend
-  });
-}
 
     // ❌ If 2FA required but not verified, skip login and redirect to verify
     if (user.totp_secret && !user.is_verified) {
@@ -287,9 +274,8 @@ if (user.totp_secret && !user.is_verified) {
 
     const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '7d' });
 
-    const safeUser = { ...user };
-delete safeUser.password;
-
+    const { password, ...safeUser } = user;
+    
     return res.json({
       message: 'Login successful ✅',
       token,
