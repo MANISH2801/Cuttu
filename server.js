@@ -269,13 +269,14 @@ app.post('/login', async (req, res) => {
       return res.json({
         message: '2FA required',
         requires_2fa: true,
-        token, // unverified token for verification
+        token,
         user: {
           id: user.id,
           email: user.email,
           username: user.username,
           user_type: user.user_type,
-          role: user.role
+          role: user.role,
+          totp_secret: user.totp_secret // ✅ send secret to frontend
         }
       });
     }
@@ -303,6 +304,7 @@ app.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 
