@@ -244,7 +244,9 @@ if (!user.totp_secret) {
     'UPDATE users SET totp_secret = $1, totp_enabled = false, is_verified = false WHERE id = $2',
     [secret.base32, user.id]
   );
-  user.totp_secret = secret.base32;
+ user.totp_secret = secret.base32;
+user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
+
 }
 
 
@@ -256,6 +258,7 @@ if (!user.totp_secret) {
         message: '2FA required',
         requires_2fa: true,
         token,
+        qr_image_url: user.qrImage, // ✅ send QR image to frontend
         user: {
           id: user.id,
           email: user.email,
@@ -274,7 +277,8 @@ if (!user.totp_secret) {
 
     const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '7d' });
 
-    const { password, ...safeUser } = user;
+    const { password: pwd, ...safeUser } = user;
+
     
     return res.json({
       message: 'Login successful ✅',
