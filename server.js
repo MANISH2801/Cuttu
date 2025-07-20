@@ -27,35 +27,24 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'https://boisterous-liger-61259d.netlify.app',
   credentials: true
 }));
+
 // ─────────── REUSABLE MIDDLEWARE ───────────
 function auth(req, res, next) {
-  const hdr = req.headers.authorization || '';
-  const token = hdr.split(' ')[1]; // Bearer <token>
-  if (!token) return res.status(401).json({ error: 'No token provided' });
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Token required' });
+  }
+
+  const token = authHeader.replace('Bearer ', '');
 
   try {
-    req.user = jwt.verify(token, JWT_SECRET); // { id, device_id }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded; // Contains { id, device_id }
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
-
-function requireAdmin(req, res, next) {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin only' });
-  }
-  next();
-}
-
-function requireSelfOrAdmin(paramKey = 'user_id') {
-  return (req, res, next) => {
-    const target = +req.params[paramKey] || +req.body[paramKey];
-    if (req.user.role === 'admin' || req.user.id === target) return next();
-    return res.status(403).json({ error: 'Not allowed' });
-  };
-}
-
 
 // ─────────── SWAGGER TAGS (top‑level) ───────────
 /**
@@ -231,14 +220,46 @@ app.post('/login', async (req, res) => {
     }
 
     // 🔐 If no TOTP secret → Generate new secret & QR
-    if (!user.totp_secret) {
-      const secret = speakeasy.generateSecret({ name: `Prep360 (${user.email})` });
-      await pool.query(
-        'UPDATE users SET totp_secret = $1, totp_enabled = false, is_verified = false WHERE id = $2',
-        [secret.base32, user.id]
-      );
-      user.totp_secret = secret.base32;
-    }
+    const qrcode = require('qrcode'); // make sure this is at top of server.js
+
+// Inside /login route:
+if (!user.totp_secret) {
+  const secret = speakeasy.generateSecret({ name: `Prep360 (${user.email})` });
+  await pool.query(
+    'UPDATE users SET totp_secret = $1, totp_enabled = false, is_verified = false WHERE id = $2',
+    [secret.base32, user.id]
+  );
+  user.totp_secret = secret.base32;
+}
+
+// ❌ If 2FA required but not verified
+if (user.totp_secret && !user.is_verified) {
+  const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '10m' });
+
+  // ✅ Generate OTP URL and QR Code
+  const otpURL = speakeasy.otpauthURL({
+    secret: user.totp_secret,
+    label: `Prep360 (${user.email})`,
+    issuer: 'Prep360',
+    encoding: 'base32'
+  });
+
+  const qrImageUrl = await qrcode.toDataURL(otpURL);
+
+  return res.json({
+    message: '2FA required',
+    requires_2fa: true,
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      user_type: user.user_type,
+      role: user.role,
+    },
+    qr_image_url: qrImageUrl  // ✅ Add this to your frontend
+  });
+}
 
     // ❌ If 2FA required but not verified, skip login and redirect to verify
     if (user.totp_secret && !user.is_verified) {
