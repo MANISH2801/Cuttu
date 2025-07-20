@@ -253,6 +253,14 @@ app.post('/login', async (req, res) => {
       console.log("❌ Password mismatch");
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    
+    // If user has 2FA enabled, reset is_verified to false on new login
+    if (user.totp_secret && user.totp_enabled) {
+      await pool.query(
+        'UPDATE users SET is_verified = false WHERE id = $1',
+        [user.id]
+      );
+    }
 
     console.log("🟢 User found:", {
       id: user.id,

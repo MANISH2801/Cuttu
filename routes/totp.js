@@ -45,17 +45,19 @@ router.post('/setup', async (req, res) => {
  * POST /auth/2fa/verify
  * Body: { token }
  */
-router.post('/verify', async (req, res) => {
+// POST /auth/2fa/verify
+router.post('/verify', authenticate, async (req, res) => {
   try {
     const { token } = req.body;
     if (!token) return res.status(400).json({ error: 'Token required' });
 
     const { rows } = await pool.query(
-      'SELECT totp_secret FROM users WHERE id=$1',
+      'SELECT totp_secret FROM users WHERE id = $1',
       [req.user.id]
     );
+
     const secret = rows[0]?.totp_secret;
-    if (!secret) return res.status(400).json({ error: 'No secret set' });
+    if (!secret) return res.status(400).json({ error: 'No TOTP secret set for this user' });
 
     const verified = speakeasy.totp.verify({
       secret,
@@ -64,19 +66,20 @@ router.post('/verify', async (req, res) => {
       window: 1
     });
 
-    if (!verified) return res.status(401).json({ error: 'Invalid token' });
+    if (!verified) return res.status(401).json({ error: 'Invalid or expired token' });
 
-    // ✅ Update both totp_enabled and is_verified
+    // ✅ Mark user as fully verified and 2FA enabled
     await pool.query(
       'UPDATE users SET totp_enabled = true, is_verified = true WHERE id = $1',
       [req.user.id]
     );
 
-    res.json({ message: '2FA enabled ✅' });
+    res.json({ message: '2FA verification successful ✅' });
   } catch (err) {
-    console.error('[2FA verify]', err);
-    res.status(500).json({ error: 'Unable to verify token' });
+    console.error('[2FA VERIFY ERROR]', err);
+    res.status(500).json({ error: 'Unable to verify token due to server error' });
   }
 });
+
 
 module.exports = router;
