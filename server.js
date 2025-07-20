@@ -261,16 +261,24 @@ app.post('/login', async (req, res) => {
     );
 
     const token = jwt.sign(
-      { id: user.id, device_id },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+  { id: user.id, device_id },
+  JWT_SECRET,
+  { expiresIn: '7d' }
+);
 
-    delete user.password;
-    user.is_logged_in = true;
-    user.device_id = device_id;
+// ❌ Old (causes error):
+// delete user.password;
+// user.is_logged_in = true;
+// user.device_id = device_id;
 
-    res.json({ message: 'Login successful ✅', token, user });
+// ✅ New (safe version):
+const safeUser = { ...user };
+delete safeUser.password;
+safeUser.is_logged_in = true;
+safeUser.device_id = device_id;
+
+res.json({ message: 'Login successful ✅', token, user: safeUser });
+
 
   } catch (err) {
     console.error('Login error:', err);
