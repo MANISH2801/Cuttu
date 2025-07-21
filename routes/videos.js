@@ -8,7 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const isAdmin = require('../middlewares/isAdmin');
+const isAdmin = require('../middlewares/isadmin');
 /**
  * @swagger
  * /videos/{courseId}:
