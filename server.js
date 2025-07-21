@@ -18,6 +18,7 @@ const enrollmentRoutes= require('./routes/enrollments');
 const videosRoutes    = require('./routes/videos');
 const dashboardRoutes = require('./routes/dashboard');
 const deviceLock      = require('./middleware/deviceLock');
+const { authenticate } = require('./middlewares/auth');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const cors = require('cors');
