@@ -19,6 +19,7 @@ const videosRoutes    = require('./routes/videos');
 const dashboardRoutes = require('./routes/dashboard');
 const deviceLock      = require('./middlewares/deviceLock');
 const { authenticate:authMiddleware } = require('./middlewares/auth');
+const isAdmin = require('./middlewares/isAdmin');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const cors = require('cors');
