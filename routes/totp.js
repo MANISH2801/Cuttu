@@ -6,7 +6,7 @@
  */
 // routes/totp.js
 const express   = require('express');
-const { authenticate } = require('../middleware/auth');   // JWT middleware
+const { authenticate } = require('../middlewares/auth');   // JWT middleware
 const speakeasy = require('speakeasy');
 const QRCode    = require('qrcode');
 const pool      = require('../db');
