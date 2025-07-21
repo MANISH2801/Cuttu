@@ -18,7 +18,6 @@ const enrollmentRoutes= require('./routes/enrollments');
 const videosRoutes    = require('./routes/videos');
 const dashboardRoutes = require('./routes/dashboard');
 const deviceLock      = require('./middleware/deviceLock');
-const { authenticate: authMiddleware } = require('./middlewares/auth');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const cors = require('cors');
@@ -329,7 +328,7 @@ user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
  *     responses:
  *       200: { description: Logged‑out }
  */
-app.post('/logout', authMiddleware, async (req, res) => {
+app.post('/logout', authenticate, async (req, res) => {
 
   try {
     const userId = req.user.id; // From JWT
