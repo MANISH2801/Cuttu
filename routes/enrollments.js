@@ -7,7 +7,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const authenticate = require('../middlewares/authenticate'); // JWT auth middleware
+const { authenticate, authorize } = require('../middlewares/auth'); // ✅ Correct
+ // JWT auth middleware
 
 /**
  * @swagger
