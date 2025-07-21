@@ -359,7 +359,7 @@ app.post('/logout', authenticate, async (req, res) => {
  *       401: { description: Not authenticated }
  */
 
-app.get("/me", authMiddleware, async (req, res) => {
+app.get("/me", authenticate, async (req, res) => {
 
   try {
     const { id } = req.user; // ✅ Comes from JWT
