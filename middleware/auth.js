@@ -34,4 +34,3 @@ function authorize(...roles) {
 }
 
 module.exports = { authenticate, authorize };
-module.exports.default = authenticate;
