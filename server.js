@@ -252,7 +252,7 @@ user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
 
     // ❌ If 2FA required but not verified, skip login and redirect to verify
     if (user.totp_secret && !user.is_verified) {
-      const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '10m' });
+      const token = jwt.sign({ id: user.id, device_id }, JWT_SECRET, { expiresIn: '7d' });
 
       return res.json({
         message: '2FA required',
@@ -316,13 +316,22 @@ user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
  *     responses:
  *       200: { description: Logged‑out }
  */
-app.post('/logout', async (req, res) => {
-  const { user_id } = req.body;
-  if (!user_id) return res.status(400).json({ error: 'user_id required' });
+app.post('/logout', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id; // From JWT
 
-  await pool.query('UPDATE users SET is_logged_in=false, device_id=NULL WHERE id=$1', [user_id]);
-  res.json({ message: 'Logged‑out ✅' });
+    await pool.query(
+      'UPDATE users SET is_logged_in = false, device_id = NULL WHERE id = $1',
+      [userId]
+    );
+
+    res.status(200).json({ message: 'Logged out successfully ✅' });
+  } catch (err) {
+    console.error('Logout error:', err);
+    res.status(500).json({ error: 'Server error during logout' });
+  }
 });
+
 
 /* ---------- WHO AM I (Protected) ---------- */
 /**
@@ -336,11 +345,27 @@ app.post('/logout', async (req, res) => {
  *       200: { description: Current user }
  *       401: { description: Not authenticated }
  */
-app.get('/me', auth, async (req, res) => {
-  const { rows } = await pool.query(
-    'SELECT id,email,role,is_logged_in,device_id FROM users WHERE id=$1', [req.user.id]);
-  res.json(rows[0]);
+
+app.get("/me", authenticate, async (req, res) => {
+  try {
+    const { id } = req.user; // ✅ Comes from JWT
+
+    const result = await pool.query(
+      "SELECT id, email, role, device_id, is_logged_in, username FROM users WHERE id = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(result.rows[0]); // ✅ Sends dynamic user data
+  } catch (err) {
+    console.error("Error in /me:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
+
 
 /* ---------- COURSES ---------- */
 
