@@ -400,24 +400,20 @@ app.get('/courses', async (_req, res) => {
  * @swagger
  * /courses/{id}:
  *   get:
- *     summary: Get course details based on user role
+ *     summary: Get full or preview version of course
  *     tags: [Courses]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: Course ID
  *         schema:
  *           type: integer
- *     security:
- *       - bearerAuth: []
+ *         description: Course ID
  *     responses:
  *       200:
- *         description: Course details
+ *         description: Course object
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Access denied
  *       404:
  *         description: Course not found
  */
@@ -431,50 +427,50 @@ app.get('/courses/:id', auth, async (req, res) => {
       [courseId]
     );
     const course = courseRows[0];
-
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
+    if (!course) return res.status(404).json({ error: 'Course not found' });
 
     const { rows: userRows } = await pool.query(
       'SELECT id, role FROM users WHERE id = $1',
       [userId]
     );
     const user = userRows[0];
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+    // ✅ Admin gets full access
     if (user.role === 'admin') {
-      return res.json(course);
+      return res.json({ ...course, enrolled: true });
     }
 
-    if (user.role === 'enrolled') {
-      const { rows: enrolled } = await pool.query(
-        'SELECT 1 FROM enrollments WHERE user_id = $1 AND course_id = $2',
-        [userId, courseId]
-      );
-      if (enrolled.length > 0) {
-        return res.json(course);
-      }
+    // ✅ Regular user? Check enrollment
+    const { rows: enrolled } = await pool.query(
+      'SELECT 1 FROM enrollments WHERE user_id = $1 AND course_id = $2',
+      [userId, courseId]
+    );
+
+    if (enrolled.length > 0) {
+      return res.json({ ...course, enrolled: true });
     }
 
+    // ❌ Not enrolled — return limited version
     const limitedCourse = {
       id: course.id,
       title: course.title,
       description: course.description,
       price: course.price,
-      first_video_link: course.first_video_link,
+      first_video: course.first_video,
+      enrolled: false,
       message: 'Upgrade to access full content'
     };
+
     return res.json(limitedCourse);
 
   } catch (err) {
-    console.error('Error in course access:', err);
+    console.error('❌ Error in course access:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
 
 /**
  * @swagger

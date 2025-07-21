@@ -12,8 +12,31 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET || '');
 const rawBodyParser = express.raw({ type: 'application/json' });
 
 /**
- * POST /payments/create-intent
- * Creates a payment intent for Stripe
+ * @swagger
+ * /payments/create-intent:
+ *   post:
+ *     summary: Create a payment intent using Stripe
+ *     tags: [Payments]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               amount:
+ *                 type: integer
+ *                 example: 99900
+ *               course_id:
+ *                 type: integer
+ *               currency:
+ *                 type: string
+ *                 example: inr
+ *     responses:
+ *       200:
+ *         description: Stripe client secret returned
+ *       500:
+ *         description: Failed to create payment intent
  */
 router.post('/create-intent', async (req, res, next) => {
   try {
@@ -35,10 +58,23 @@ router.post('/create-intent', async (req, res, next) => {
     next(err);
   }
 });
-
 /**
- * POST /payments/webhook
- * Stripe webhook endpoint to confirm payment
+ * @swagger
+ * /payments/webhook:
+ *   post:
+ *     summary: Stripe webhook to handle payment success
+ *     tags: [Payments]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Webhook event received
+ *       400:
+ *         description: Invalid webhook signature
  */
 router.post('/webhook', rawBodyParser, async (req, res) => {
   const sig = req.headers['stripe-signature'];
