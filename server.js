@@ -258,8 +258,9 @@ if (!user.totp_secret) {
     'UPDATE users SET totp_secret = $1, totp_enabled = false, is_verified = false WHERE id = $2',
     [secret.base32, user.id]
   );
- const otpauth_url = secret.otpauth_url;
-  user.qrImage = await qrcode.toDataURL(otpauth_url);
+ user.totp_secret = secret.base32;
+user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
+
 }
 
 
