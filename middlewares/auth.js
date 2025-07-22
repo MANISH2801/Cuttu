@@ -15,7 +15,8 @@ function authenticate(req, res, next) {
   if (!token) return res.status(401).json({ error: 'No token provided' });
 
   try {
-    req.user = jwt.verify(token, JWT_SECRET); // payload: { id, role, deviceId, ... }
+    const decoded = jwt.verify(token, JWT_SECRET);  // safer
+    req.user = decoded; // attach payload to req.user ✅
     return next();
   } catch (err) {
     console.error('[auth]', err);

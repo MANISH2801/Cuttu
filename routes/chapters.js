@@ -8,7 +8,8 @@
 const express = require('express');
 const pool = require('../db');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
+
 
 
 // 🔐 Middleware to protect admin routes
