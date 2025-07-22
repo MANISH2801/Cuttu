@@ -8,7 +8,7 @@
 const express = require('express');
 const pool = require('../db');
 const router = express.Router();
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middlewares/auth');
 
 
 
