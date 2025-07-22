@@ -35,8 +35,8 @@ router.post('/', authenticate, authorize('admin'), async (req, res) => {
 
   try {
     const result = await pool.query(
-      'INSERT INTO chapters (course_id, title, created_at) VALUES ($1, $2, NOW()) RETURNING *',
-      [parseInt(course_id, 10), title]
+      'INSERT INTO chapters (course_id, name, created_at) VALUES ($1, $2, NOW()) RETURNING *',
+[course_id, name]  
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
