@@ -268,7 +268,7 @@ user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
     if (user.totp_secret && !user.is_verified) {
       const token = jwt.sign(
   { id: user.id, device_id, role: user.role },
-  SECRET_KEY,
+  JWT_SECRET,
   { expiresIn: "7d" }
 );
 
@@ -296,7 +296,7 @@ user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
 
    const token = jwt.sign(
   { id: user.id, device_id, role: user.role },
-  SECRET_KEY,
+  JWT_SECRET,
   { expiresIn: "7d" }
 );
 
