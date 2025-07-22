@@ -8,6 +8,8 @@
 const express = require('express');
 const pool = require('../db');
 const router = express.Router();
+const { authenticate, authorize } = require('../middleware/auth');
+
 
 // 🔐 Middleware to protect admin routes
 function isAdmin(req, res, next) {
@@ -22,7 +24,7 @@ function isAdmin(req, res, next) {
  * @desc Create a new chapter
  * @access Admin only
  */
-router.post('/', isAdmin, async (req, res) => {
+router.post('/', authenticate, authorize('admin'), async (req, res) => {
   const { course_id, title } = req.body;
 
   if (!course_id || !title) {
@@ -46,7 +48,7 @@ router.post('/', isAdmin, async (req, res) => {
  * @desc Update a chapter title
  * @access Admin only
  */
-router.put('/:id', isAdmin, async (req, res) => {
+router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
   const { title } = req.body;
   const chapterId = req.params.id;
 
@@ -76,7 +78,7 @@ router.put('/:id', isAdmin, async (req, res) => {
  * @desc Delete a chapter
  * @access Admin only
  */
-router.delete('/:id', isAdmin, async (req, res) => {
+router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   const chapterId = req.params.id;
 
   try {
@@ -98,7 +100,7 @@ router.delete('/:id', isAdmin, async (req, res) => {
  * @desc Get all chapters for a course
  * @access Authenticated (any user)
  */
-router.get('/:courseId', async (req, res) => {
+router.get('/:courseId', authenticate, async (req, res) => {
   const courseId = req.params.courseId;
 
   try {
