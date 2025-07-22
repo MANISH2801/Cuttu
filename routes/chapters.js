@@ -26,7 +26,8 @@ function isAdmin(req, res, next) {
  * @access Admin only
  */
 router.post('/', authenticate, authorize('admin'), async (req, res) => {
-  const { course_id, title } = req.body;
+  const { course_id, name } = req.body;
+  const title = name;
 
   if (!course_id || !title) {
     return res.status(400).json({ error: 'course_id and title are required' });
@@ -35,7 +36,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res) => {
   try {
     const result = await pool.query(
       'INSERT INTO chapters (course_id, title, created_at) VALUES ($1, $2, NOW()) RETURNING *',
-      [course_id, title]
+      [parseInt(course_id, 10), title]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -43,6 +44,26 @@ router.post('/', authenticate, authorize('admin'), async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+router.post('/', authenticate, authorize('admin'), async (req, res) => {
+  const { course_id, name } = req.body;
+  const title = name;
+
+  if (!course_id || !title) {
+    return res.status(400).json({ error: 'course_id and title are required' });
+  }
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO chapters (course_id, title, created_at) VALUES ($1, $2, NOW()) RETURNING *',
+      [parseInt(course_id, 10), title]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating chapter:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 /**
  * @route PUT /chapters/:id
