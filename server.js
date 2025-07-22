@@ -28,8 +28,11 @@ const app = express();
 app.use(express.json());
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'https://boisterous-liger-61259d.netlify.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
 
 
 // ─────────── SWAGGER TAGS (top‑level) ───────────
