@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const isAdmin = require('../middlewares/isAdmin'); // ensure this exists
+const { authenticate, authorize } = require('../middlewares/auth');
 
 /**
  * @swagger
