@@ -267,7 +267,7 @@ user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
     // ❌ If 2FA required but not verified, skip login and redirect to verify
     if (user.totp_secret && !user.is_verified) {
       const token = jwt.sign(
-  { id: user.id, device_id, role: user.role },
+  { id: user.id, device_id, role},
   SECRET_KEY,
   { expiresIn: "7d" }
 );
@@ -295,7 +295,7 @@ user.qrImage = await qrcode.toDataURL(secret.otpauth_url); // ✅ generate QR
     );
 
     const token = jwt.sign(
-  { id: user.id, device_id, role: user.role },
+  { id: user.id, device_id, role },
   SECRET_KEY,
   { expiresIn: "7d" }
 );
