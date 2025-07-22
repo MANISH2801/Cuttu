@@ -8,7 +8,6 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const isAdmin = require('../middlewares/isAdmin'); // ensure this exists
 const { authenticate, authorize } = require('../middlewares/auth');
 
 /**
@@ -68,7 +67,7 @@ router.get('/:chapterId/lessons', async (req, res) => {
  *       201:
  *         description: Lesson created
  */
-router.post('/:chapterId/lessons', isAdmin, async (req, res) => {
+router.post('/:chapterId/lessons', authenticate, authorize('admin'), async (req, res) => {
   const { chapterId } = req.params;
   const { title, content } = req.body;
 
@@ -108,7 +107,7 @@ router.post('/:chapterId/lessons', isAdmin, async (req, res) => {
  *       200:
  *         description: Lesson updated
  */
-router.put('/lessons/:id', isAdmin, async (req, res) => {
+router.put('/lessons/:id', authenticate, authorize('admin'), async (req, res) => {
   const { id } = req.params;
   const { title, content } = req.body;
 
@@ -137,7 +136,7 @@ router.put('/lessons/:id', isAdmin, async (req, res) => {
  *       200:
  *         description: Lesson deleted
  */
-router.delete('/lessons/:id', isAdmin, async (req, res) => {
+router.delete('/lessons/:id', authenticate, authorize('admin'), async (req, res) => {
   const { id } = req.params;
 
   await pool.query('DELETE FROM lessons WHERE id=$1', [id]);
