@@ -1,4 +1,3 @@
-
 /**
  * @swagger
  * tags:
@@ -9,6 +8,40 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const isAdmin = require('../middlewares/isAdmin');
+
+/**
+ * @swagger
+ * /videos/live:
+ *   get:
+ *     summary: Get the current live video link for all users
+ *     tags: [Videos]
+ *     responses:
+ *       200:
+ *         description: Live video link returned
+ *       500:
+ *         description: Failed to fetch live video
+ */
+router.get('/live', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT id, title, live_video AS link
+      FROM courses
+      WHERE live_video IS NOT NULL
+      ORDER BY updated_at DESC NULLS LAST
+      LIMIT 1
+    `);
+
+    if (!rows[0]) {
+      return res.status(404).json({ error: 'No live video found' });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('❌ Error fetching live video:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 /**
  * @swagger
  * /videos/{courseId}:
@@ -51,7 +84,7 @@ router.put('/:courseId', isAdmin, async (req, res) => {
   try {
     await pool.query(
       `UPDATE courses
-       SET first_video=$1, live_video=$2, archived_video=$3
+       SET first_video=$1, live_video=$2, archived_video=$3, updated_at=NOW()
        WHERE id=$4`,
       [first_video, live_video, archived_video, courseId]
     );

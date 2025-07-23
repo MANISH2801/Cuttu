@@ -694,8 +694,7 @@ app.use('/admin/dashboard', auth, deviceLock, requireAdmin, dashboardRoutes);
 // Serve Swagger docs at /api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/payments', authMiddleware, require('./routes/payment'));
-
-
+app.use('/api/videos', require('./routes/videos'));
 app.use('/chapters', require('./routes/chapters'));
 app.use('/lessons', require('./routes/lessons'));
 
