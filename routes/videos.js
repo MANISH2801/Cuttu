@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const { authenticate } = require('../middlewares/auth');
 const isAdmin = require('../middlewares/isAdmin');
 
 /**
@@ -77,7 +78,7 @@ router.get('/live', async (req, res) => {
  *       500:
  *         description: Failed to update video links
  */
-router.put('/:courseId', isAdmin, async (req, res) => {
+router.put('/:courseId', authenticate, isAdmin, async (req, res) => {
   const { courseId } = req.params;
   const { first_video, live_video, archived_video } = req.body;
 
@@ -95,5 +96,4 @@ router.put('/:courseId', isAdmin, async (req, res) => {
     res.status(500).json({ error: 'Failed to update video links' });
   }
 });
-
 module.exports = router;
