@@ -25,10 +25,10 @@ const isAdmin = require('../middlewares/isAdmin');
 router.get('/live', async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT id, title, live_video AS link
+      SELECT id, name AS title, live_video AS link
       FROM courses
       WHERE live_video IS NOT NULL
-      ORDER BY updated_at DESC NULLS LAST
+      ORDER BY COALESCE(updated_at, created_at) DESC
       LIMIT 1
     `);
 
@@ -42,6 +42,7 @@ router.get('/live', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 /**
  * @swagger
