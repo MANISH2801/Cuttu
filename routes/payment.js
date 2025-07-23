@@ -7,8 +7,15 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const stripe = require('stripe')(process.env.STRIPE_SECRET || '');
+const { authenticate } = require('../middlewares/auth');
 
+// Stripe setup with error if missing secret
+if (!process.env.STRIPE_SECRET) {
+  throw new Error("❌ STRIPE_SECRET is missing in environment variables.");
+}
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
+
+// Needed for webhook raw body
 const rawBodyParser = express.raw({ type: 'application/json' });
 
 /**
@@ -38,7 +45,7 @@ const rawBodyParser = express.raw({ type: 'application/json' });
  *       500:
  *         description: Failed to create payment intent
  */
-router.post('/create-intent', async (req, res, next) => {
+router.post('/create-intent', authenticate, async (req, res, next) => {
   try {
     const { amount, course_id, currency = 'inr' } = req.body;
     const userId = req.user.id;
@@ -55,9 +62,11 @@ router.post('/create-intent', async (req, res, next) => {
 
     res.json({ clientSecret: intent.client_secret });
   } catch (err) {
+    console.error("❌ Error creating payment intent:", err.message);
     next(err);
   }
 });
+
 /**
  * @swagger
  * /payments/webhook:
@@ -104,25 +113,15 @@ router.post('/webhook', rawBodyParser, async (req, res) => {
     const status = 'succeeded';
 
     try {
-      // Insert order
       await pool.query(
         `INSERT INTO orders (
           user_id, course_id, amount,
           payment_status, payment_id,
           currency, payment_method, created_at
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())`,
-        [
-          userId,
-          courseId,
-          amount,
-          status,
-          paymentId,
-          currency,
-          paymentMethod
-        ]
+        [userId, courseId, amount, status, paymentId, currency, paymentMethod]
       );
 
-      // Enroll user
       await pool.query(
         `INSERT INTO enrollments (user_id, course_id, enrolled_at)
          VALUES ($1, $2, NOW())
