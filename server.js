@@ -455,9 +455,9 @@ app.get('/courses/:id', auth, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     // ✅ Admin gets full access
-     if (user.role === 'admin') {
-  return res.json({ ...course, enrolled: true, role: 'admin' });
-}
+    if (user.role === 'admin') {
+      return res.json({ ...course, isEnrolled: true, role: 'admin' });
+    }
 
     // ✅ Regular user? Check enrollment
     const { rows: enrolled } = await pool.query(
@@ -466,22 +466,20 @@ app.get('/courses/:id', auth, async (req, res) => {
     );
 
     if (enrolled.length > 0) {
-  return res.json({ ...course, enrolled: true, role: user.role });
-}
-
+      return res.json({ ...course, isEnrolled: true, role: user.role });
+    }
 
     // ❌ Not enrolled — return limited version
     const limitedCourse = {
-  id: course.id,
-  title: course.title,
-  description: course.description,
-  price: course.price,
-  first_video: course.first_video,
-  enrolled: false,
-  message: 'Upgrade to access full content',
-  role: user.role
-};
-
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      price: course.price,
+      first_video: course.first_video,
+      isEnrolled: false,
+      message: 'Upgrade to access full content',
+      role: user.role
+    };
 
     return res.json(limitedCourse);
 
@@ -490,8 +488,6 @@ app.get('/courses/:id', auth, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-
 
 /**
  * @swagger
