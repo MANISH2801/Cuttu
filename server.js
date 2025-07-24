@@ -27,7 +27,7 @@ const cors = require('cors');
 const app = express();
 app.use(express.json());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://boisterous-liger-61259d.netlify.app',
+  origin: process.env.FRONTEND_URL || 'https://prep360eductech.in',
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
