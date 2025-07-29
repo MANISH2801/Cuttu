@@ -45,7 +45,6 @@
   "homepage": "https://github.com/MANISH2801/Cuttu#readme",
   "engines": {
     "node": ">=18.0.0"
-  },
-  "type": "module"
-}
+  }
+}  
 

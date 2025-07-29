@@ -4,8 +4,7 @@
  *   name: 2FA
  *   description: Two‑factor authentication endpoints
  */
-import fetch from 'node-fetch'; // Import fetch (ESM syntax)
-
+const fetch = require('node-fetch');
 const express = require('express');
 const { authenticate } = require('../middlewares/auth');  // JWT middleware
 const pool = require('../db');

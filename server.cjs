@@ -5,8 +5,7 @@
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET || 'super‑demo‑secret';
 
-import fetch from 'node-fetch'; // Only if you are using fetch in server.js
-
+const fetch = require('node-fetch');
 const express    = require('express');
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
@@ -14,7 +13,7 @@ const Joi        = require('joi');
 const pool       = require('./db');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
-const totpRoutes      = require('./routes/totp');
+const totpRoutes      = require('./routes/totp.cjs');
 const pwResetRoutes   = require('./routes/passwordReset');
 const enrollmentRoutes= require('./routes/enrollments');
 const videosRoutes    = require('./routes/videos');
