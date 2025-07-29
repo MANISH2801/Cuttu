@@ -4,12 +4,10 @@
  *   name: 2FA
  *   description: Two‑factor authentication endpoints
  */
-// routes/totp.js
-const express   = require('express');
-const { authenticate } = require('../middlewares/auth');   // JWT middleware
-const speakeasy = require('speakeasy');
-const QRCode    = require('qrcode');
-const pool      = require('../db');
+const express = require('express');
+const { authenticate } = require('../middlewares/auth');  // JWT middleware
+const fetch = require('node-fetch');
+const pool = require('../db');
 
 const router = express.Router();
 
@@ -18,43 +16,39 @@ router.use(authenticate);
 
 /**
  * POST /auth/2fa/verify
- * Body: { token }
+ * Body: { captchaResponse }
  */
-// POST /auth/2fa/verify
 router.post('/verify', authenticate, async (req, res) => {
   try {
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ error: 'Token required' });
+    const { captchaResponse } = req.body; // reCAPTCHA response from frontend
+    if (!captchaResponse) {
+      return res.status(400).json({ error: 'Captcha response required' });
+    }
 
-    const { rows } = await pool.query(
-      'SELECT totp_secret FROM users WHERE id = $1',
-      [req.user.id]
-    );
+    // Verify the CAPTCHA response with Google's reCAPTCHA API
+    const secretKey = '6Lclc5MrAAAAADXpREb6CaedI5Ea5r5hK-336vE3'; // Your Secret Key
+    const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaResponse}`;
 
-    const secret = rows[0]?.totp_secret;
-    if (!secret) return res.status(400).json({ error: 'No TOTP secret set for this user' });
+    // Send request to Google's reCAPTCHA verification API
+    const verifyRes = await fetch(verifyURL, { method: 'POST' });
+    const verifyData = await verifyRes.json();
 
-    const verified = speakeasy.totp.verify({
-      secret,
-      encoding: 'base32',
-      token,
-      window: 1
-    });
+    if (!verifyData.success) {
+      return res.status(401).json({ error: 'CAPTCHA verification failed' });
+    }
 
-    if (!verified) return res.status(401).json({ error: 'Invalid or expired token' });
-
-    // ✅ Mark user as fully verified and 2FA enabled
+    // CAPTCHA is valid, mark user as verified
     await pool.query(
-      'UPDATE users SET totp_enabled = true, is_verified = true WHERE id = $1',
+      'UPDATE users SET is_verified = true WHERE id = $1',
       [req.user.id]
     );
 
-    res.json({ message: '2FA verification successful ✅' });
+    res.json({ message: 'CAPTCHA verification successful ✅' });
+
   } catch (err) {
     console.error('[2FA VERIFY ERROR]', err);
-    res.status(500).json({ error: 'Unable to verify token due to server error' });
+    res.status(500).json({ error: 'Unable to verify CAPTCHA due to server error' });
   }
 });
-
 
 module.exports = router;
