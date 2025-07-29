@@ -1,15 +1,13 @@
 /**
  * @swagger
  * tags:
- *   name: 2FA
- *   description: Two‑factor authentication endpoints
+ *   name: CAPTCHA
+ *   description: CAPTCHA verification endpoint
  */
-// routes/totp.js
-const express   = require('express');
+// routes/captcha.js
+const express = require('express');
 const { authenticate } = require('../middlewares/auth');   // JWT middleware
-const speakeasy = require('speakeasy');
-const QRCode    = require('qrcode');
-const pool      = require('../db');
+const pool = require('../db');
 
 const router = express.Router();
 
@@ -17,44 +15,35 @@ const router = express.Router();
 router.use(authenticate);
 
 /**
- * POST /auth/2fa/verify
- * Body: { token }
+ * POST /auth/captcha/verify
+ * Body: { captchaAnswer }
  */
-// POST /auth/2fa/verify
 router.post('/verify', authenticate, async (req, res) => {
   try {
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ error: 'Token required' });
+    const { captchaAnswer } = req.body;
 
-    const { rows } = await pool.query(
-      'SELECT totp_secret FROM users WHERE id = $1',
-      [req.user.id]
-    );
+    // Check if captchaAnswer is provided
+    if (!captchaAnswer) return res.status(400).json({ error: 'Captcha answer required' });
 
-    const secret = rows[0]?.totp_secret;
-    if (!secret) return res.status(400).json({ error: 'No TOTP secret set for this user' });
+    // The correct answer to the math question (for example: 89 + 51)
+    const correctAnswer = 140;  // Modify this with your random question logic
 
-    const verified = speakeasy.totp.verify({
-      secret,
-      encoding: 'base32',
-      token,
-      window: 1
-    });
+    // Verify if the answer is correct
+    if (parseInt(captchaAnswer) !== correctAnswer) {
+      return res.status(400).json({ error: 'Incorrect CAPTCHA answer' });
+    }
 
-    if (!verified) return res.status(401).json({ error: 'Invalid or expired token' });
-
-    // ✅ Mark user as fully verified and 2FA enabled
+    // ✅ CAPTCHA verification passed, now proceed with regular flow (e.g., enabling 2FA or marking the user as verified)
     await pool.query(
-      'UPDATE users SET totp_enabled = true, is_verified = true WHERE id = $1',
+      'UPDATE users SET captcha_verified = true WHERE id = $1',
       [req.user.id]
     );
 
-    res.json({ message: '2FA verification successful ✅' });
+    res.json({ message: 'CAPTCHA verification successful ✅' });
   } catch (err) {
-    console.error('[2FA VERIFY ERROR]', err);
-    res.status(500).json({ error: 'Unable to verify token due to server error' });
+    console.error('[CAPTCHA VERIFY ERROR]', err);
+    res.status(500).json({ error: 'Unable to verify CAPTCHA due to server error' });
   }
 });
-
 
 module.exports = router;
