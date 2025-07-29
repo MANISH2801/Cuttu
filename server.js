@@ -5,6 +5,8 @@
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET || 'super‑demo‑secret';
 
+import fetch from 'node-fetch'; // Only if you are using fetch in server.js
+
 const express    = require('express');
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
