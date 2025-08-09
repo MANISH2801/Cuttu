@@ -26,7 +26,7 @@ router.post('/request-password-reset', async (req, res) => {
   }
 
   // Verify reCAPTCHA token with Google's API
-  const secretKey = 'YOUR_RECAPTCHA_SECRET_KEY';  // Use your actual secret key
+  const secretKey = '6Lclc5MrAAAAADXpREb6CaedI5Ea5r5hK-336vE3';  // Use your actual secret key
   const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
 
   try {
