@@ -27,14 +27,13 @@ const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-const cors = require('cors');
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://prep360eductech.in',  // Fallback URL for development
-  credentials: true,  // Allow sending cookies with requests
-  allowedHeaders: ['Content-Type', 'Authorization']  // Allowed headers for requests
+  origin: process.env.FRONTEND_URL || 'https://prep360eductech.in',
+  credentials: true,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
 
 
 
