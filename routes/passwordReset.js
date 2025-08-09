@@ -1,4 +1,3 @@
-
 /**
  * @swagger
  * tags:
@@ -6,40 +5,71 @@
  *   description: Password reset endpoints
  */
 // routes/passwordReset.js
+const fetch = require('node-fetch');
 const express = require('express');
-const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 const pool = require('../db');
-const sendMail = require('../utils/email');
+const crypto = require('crypto');  // For generating the reset token
+const sendEmail = require('../utils/email');  // Email sending function
 
 const router = express.Router();
-
 /**
  * POST /auth/request-password-reset
  * Body: { email }
  */
+// POST /auth/request-password-reset
 router.post('/request-password-reset', async (req, res) => {
-  const { email } = req.body;
-  const { rows } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
-  if (!rows.length) return res.status(404).json({ error: 'User not found' });
+  const { email, recaptchaToken } = req.body;
 
-  const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + 1000 * 60 * 30); // 30 min
+  // Check if the reCAPTCHA token is provided
+  if (!recaptchaToken) {
+    return res.status(400).json({ error: 'reCAPTCHA token is required.' });
+  }
 
-  await pool.query(
-    'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1,$2,$3)',
-    [rows[0].id, token, expires]
-  );
+  // Verify reCAPTCHA token with Google's API
+  const secretKey = 'YOUR_RECAPTCHA_SECRET_KEY';  // Use your actual secret key
+  const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
 
-  const link = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-  await sendMail({
-    to: email,
-    subject: 'Prep360 Password Reset',
-    html: `<p>Click <a href="${link}">here</a> to reset your password. This link expires in 30 minutes.</p>`
-  });
+  try {
+    const verifyRes = await fetch(verifyURL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
 
-  res.json({ message: 'Reset email sent' });
+    const verifyData = await verifyRes.json();
+
+    // If CAPTCHA verification fails, return an error
+    if (!verifyData.success || verifyData.score < 0.5) {  // You can adjust the score threshold
+      return res.status(401).json({ error: 'reCAPTCHA verification failed' });
+    }
+
+    // reCAPTCHA verified, now proceed with password reset logic
+    const { rows } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+
+    // Generate a reset token and expiration time (30 minutes expiry)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + 1000 * 60 * 30;
+
+    // Save reset token in the database
+    await pool.query(
+      'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [rows[0].id, resetToken, expiresAt]
+    );
+
+    // Send reset link to the user’s email
+    const resetLink = `https://yourdomain.com/reset-password?token=${resetToken}`;
+    await sendEmail(email, 'Password Reset', resetLink);
+
+    res.json({ message: 'Password reset link sent to your email.' });
+
+  } catch (err) {
+    console.error('[Password Reset Error]', err);
+    res.status(500).json({ error: 'Something went wrong. Please try again later.' });
+  }
 });
+
 
 /**
  * POST /auth/reset-password
