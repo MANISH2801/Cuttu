@@ -80,6 +80,40 @@ router.post('/request-password-reset', async (req, res) => {
   }
 });
 
+// Assuming the route is in routes/tokenFetch.js
+
+router.get('/fetch-token', async (req, res) => {
+  const { email } = req.query; // You can use email or other identifiers
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT token, expires_at FROM password_resets WHERE email=$1',
+      [email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'No token found for this email' });
+    }
+
+    const { token, expires_at } = rows[0];
+
+    // Check if token is expired
+    if (new Date(expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Token expired' });
+    }
+
+    // Return the token if everything is fine
+    res.json({ token });
+  } catch (err) {
+    console.error('Error fetching token:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 /**
  * POST /auth/reset-password
  * Body: { token, password }
