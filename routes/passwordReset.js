@@ -26,8 +26,12 @@ async function triggerPasswordReset(userId, email) {
       [userId, email, resetToken, expiresAt]
     );
 
-    // You may want to send an email here to the user
-    await sendEmail(email, 'Password Reset Request', `Your password reset token is: ${resetToken}`);
+    // Send email with reset link (just like during registration)
+    await sendEmail({
+      to: email,
+      subject: 'Password Reset Request',
+      text: `Click on the link to reset your password: https://yourdomain.com/reset-password?token=${resetToken}`,
+    });
 
     return { success: true };
   } catch (err) {
@@ -44,16 +48,14 @@ async function triggerPasswordReset(userId, email) {
 router.post('/request-password-reset', async (req, res) => {
   const { email, recaptchaToken } = req.body;
 
-  // If no reCAPTCHA token is provided, return an error
   if (!recaptchaToken) {
     return res.status(400).json({ error: 'reCAPTCHA token is required.' });
   }
 
-  const secretKey = '6Lclc5MrAAAAADXpREb6CaedI5Ea5r5hK-336vE3';
+  const secretKey = 'your-recaptcha-secret-key';
   const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
 
   try {
-    // Verify reCAPTCHA token
     const verifyRes = await fetch(verifyURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -65,18 +67,17 @@ router.post('/request-password-reset', async (req, res) => {
       return res.status(401).json({ error: 'reCAPTCHA verification failed' });
     }
 
-    // Check if the user exists in the database
+    // Look up user by email
     const { rows } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
-    // Get userId and pass it to the reset function
     const userId = rows[0].id;
-    const resetResult = await triggerPasswordReset(userId, email); // Pass email here
+    const resetResult = await triggerPasswordReset(userId, email); // Pass email to trigger password reset
 
     if (resetResult.success) {
       return res.json({ message: 'Password reset initiated. Please check your email for further instructions.' });
     } else {
-      return res.status(500).json({ error: resetResult.error || 'Failed to password reset.' });
+      return res.status(500).json({ error: resetResult.error || 'Failed to trigger password reset.' });
     }
 
   } catch (err) {
@@ -84,9 +85,6 @@ router.post('/request-password-reset', async (req, res) => {
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
-
-module.exports = router;
-
 
 // Assuming the route is in routes/tokenFetch.js
 
