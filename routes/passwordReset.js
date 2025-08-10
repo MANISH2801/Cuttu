@@ -5,30 +5,26 @@
  *   description: Password reset endpoints
  */
 // routes/passwordReset.js
-const fetch = require('node-fetch');
 const express = require('express');
 const pool = require('../db');
-const crypto = require('crypto');  // For generating the reset token
-const sendEmail = require('../utils/email');  // Email sending function
+const crypto = require('crypto');
+const sendEmail = require('../utils/email');
 
 const router = express.Router();
 
 // This should be placed in your passwordReset.js or the relevant file
 async function triggerPasswordReset(userId) {
   try {
-    // Generate a reset token (32-byte random hex string)
     const resetToken = crypto.randomBytes(32).toString('hex');
-    
-    // Expiration time for the token (30 minutes)
-    const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60; // Convert to seconds (milliseconds to seconds)
-    
+    const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60; // Convert to seconds
+
     // Save reset token to the database
     await pool.query(
       'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, to_timestamp($3))',
       [userId, resetToken, expiresAt]
     );
 
-    return { success: true };  // No email sending part now
+    return { success: true };
   } catch (err) {
     console.error('[Password Reset Error]', err);
     return { success: false, error: 'Failed to trigger password reset.' };
@@ -46,13 +42,11 @@ async function triggerPasswordReset(userId) {
 router.post('/request-password-reset', async (req, res) => {
   const { email, recaptchaToken } = req.body;
 
-  // Check if reCAPTCHA token is provided
   if (!recaptchaToken) {
     return res.status(400).json({ error: 'reCAPTCHA token is required.' });
   }
 
-  // Verify reCAPTCHA with Google
-  const secretKey = '6Lclc5MrAAAAADXpREb6CaedI5Ea5r5hK-336vE3'; // Use your actual secret key
+  const secretKey = 'your-recaptcha-secret-key';
   const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
 
   try {
@@ -63,34 +57,27 @@ router.post('/request-password-reset', async (req, res) => {
 
     const verifyData = await verifyRes.json();
 
-    // If CAPTCHA fails, return an error
     if (!verifyData.success || verifyData.score < 0.5) {
       return res.status(401).json({ error: 'reCAPTCHA verification failed' });
     }
 
-    // Check if the email exists
     const { rows } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
     const userId = rows[0].id;
-
-    // Call the triggerPasswordReset function to generate token and send email
     const resetResult = await triggerPasswordReset(userId);
 
     if (resetResult.success) {
       return res.json({ message: 'Password reset initiated. Please check your email for further instructions.' });
     } else {
-      return res.status(500).json({ error: resetResult.error || 'Failed to trigger password reset.' });
+      return res.status(500).json({ error: resetResult.error || 'Failed to password reset.' });
     }
 
   } catch (err) {
     console.error('[Password Reset Error]', err);
-    res.status(500).json({ error: 'Something went wrong. Please try again later.' });
+    res.status(500).json({ error: 'Something went wrong.' });
   }
 });
-
-
-
 
 /**
  * POST /auth/reset-password

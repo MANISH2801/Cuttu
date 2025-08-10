@@ -28,12 +28,26 @@ const cors = require('cors');
 const app = express();
 app.use(express.json());
 
+// CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://prep360eductech.in',
+  origin: process.env.FRONTEND_URL || 'https://prep360eductech.in', // Ensure this matches your frontend URL
   credentials: true,
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Allow pre-flight requests (OPTIONS)
+app.options('*', cors());
+
+// Your routes here
+app.use(express.json());
+app.use('/auth', require('./routes/passwordReset')); // Add your routes as needed
+
+// Start the server
+const port = process.env.PORT || 5000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
 
 
 
