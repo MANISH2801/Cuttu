@@ -8,30 +8,20 @@
 const express = require('express');
 const pool = require('../db');
 const crypto = require('crypto');
-const sendEmail = require('../utils/email');
-const bcrypt = require('bcryptjs');
-const fetch = require('node-fetch');  // Make sure fetch is imported
-
 const router = express.Router();
 
-// This should be placed in your passwordReset.js or the relevant file
+// Function to trigger password reset
 async function triggerPasswordReset(userId, email) {
   try {
+    // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60; // Convert to seconds
+    const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60; // Token expiration time
 
     // Save reset token and email to the database
     await pool.query(
       'INSERT INTO password_resets (user_id, email, token, expires_at) VALUES ($1, $2, $3, to_timestamp($4))',
       [userId, email, resetToken, expiresAt]
     );
-
-    // Send email with reset link (just like during registration)
-    await sendEmail({
-      to: email,
-      subject: 'Password Reset Request',
-      text: `Click on the link to reset your password: https://yourdomain.com/reset-password?token=${resetToken}`,
-    });
 
     return { success: true };
   } catch (err) {
@@ -40,10 +30,9 @@ async function triggerPasswordReset(userId, email) {
   }
 }
 
-
 /**
  * POST /auth/request-password-reset
- * Body: { email }
+ * Body: { email, recaptchaToken }
  */
 router.post('/request-password-reset', async (req, res) => {
   const { email, recaptchaToken } = req.body;
@@ -67,24 +56,25 @@ router.post('/request-password-reset', async (req, res) => {
       return res.status(401).json({ error: 'reCAPTCHA verification failed' });
     }
 
-    // Look up user by email
+    // Check if the email exists in the users table
     const { rows } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
     const userId = rows[0].id;
-    const resetResult = await triggerPasswordReset(userId, email); // Pass email to trigger password reset
+    const resetResult = await triggerPasswordReset(userId, email);
 
     if (resetResult.success) {
       return res.json({ message: 'Password reset initiated. Please check your email for further instructions.' });
     } else {
-      return res.status(500).json({ error: resetResult.error || 'Failed to trigger password reset.' });
+      return res.status(500).json({ error: resetResult.error || 'Failed to initiate password reset.' });
     }
-
   } catch (err) {
     console.error('[Password Reset Error]', err);
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
+
+
 
 // Assuming the route is in routes/tokenFetch.js
 
