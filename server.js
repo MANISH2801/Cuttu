@@ -41,7 +41,7 @@ app.options('*', cors());
 
 // Your routes here
 app.use(express.json());
-app.use('/auth', require('./passwordReset')); // Add your routes as needed
+app.use('/auth', require('./routes/passwordReset')); // Add your routes as needed
 
 
 // ─────────── SWAGGER TAGS (top‑level) ───────────
