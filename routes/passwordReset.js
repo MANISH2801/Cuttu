@@ -12,6 +12,36 @@ const crypto = require('crypto');  // For generating the reset token
 const sendEmail = require('../utils/email');  // Email sending function
 
 const router = express.Router();
+
+// This should be placed in your passwordReset.js or the relevant file
+async function triggerPasswordReset(userId) {
+  try {
+    // Generate a reset token (32-byte random hex string)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Expiration time for the token (30 minutes)
+    const expiresAt = Date.now() + 1000 * 60 * 30; // 30 minutes expiry
+    
+    // Save reset token to the database
+    await pool.query(
+      'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [userId, resetToken, expiresAt]
+    );
+    
+    // Optionally, send a password reset email (you can adjust this part based on your needs)
+    const user = await pool.query('SELECT email FROM users WHERE id=$1', [userId]);
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;// Adjust URL as needed
+
+    // Send the reset link to the user's email (you may use a helper function to send emails)
+    await sendEmail(user.rows[0].email, 'Password Reset', resetLink);
+
+    return { success: true };
+  } catch (err) {
+    console.error('[Password Reset Error]', err);
+    return { success: false, error: 'Failed to trigger password reset.' };
+  }
+}
+
 /**
  * POST /auth/request-password-reset
  * Body: { email }
