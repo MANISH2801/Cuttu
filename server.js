@@ -41,15 +41,7 @@ app.options('*', cors());
 
 // Your routes here
 app.use(express.json());
-app.use('/auth', require('./routes/passwordReset')); // Add your routes as needed
-
-// Start the server
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
-
+app.use('/auth', require('./passwordReset')); // Add your routes as needed
 
 
 // ─────────── SWAGGER TAGS (top‑level) ───────────
@@ -716,8 +708,10 @@ app.use('/chapters', require('./routes/chapters'));
 app.use('/lessons', require('./routes/lessons'));
 
 // ─────────────── Start server ───────────────
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀  Listening on ${PORT}`));
+const PORT = process.env.PORT || 3000;  // Use 3000 or any other available port
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 /* ------------- Swagger COMPONENTS (optional) -------------
  * @swagger
