@@ -20,11 +20,11 @@ async function triggerPasswordReset(userId) {
     const resetToken = crypto.randomBytes(32).toString('hex');
     
     // Expiration time for the token (30 minutes)
-    const expiresAt = Date.now() + 1000 * 60 * 30; // 30 minutes expiry
+    const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60; // Convert to seconds (milliseconds to seconds)
     
     // Save reset token to the database
     await pool.query(
-      'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, to_timestamp($3))',
       [userId, resetToken, expiresAt]
     );
 
@@ -34,6 +34,7 @@ async function triggerPasswordReset(userId) {
     return { success: false, error: 'Failed to trigger password reset.' };
   }
 }
+
 
 
 /**
