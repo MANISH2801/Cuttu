@@ -85,23 +85,57 @@ router.post('/request-password-reset', async (req, res) => {
  */
 router.post('/reset-password', async (req, res) => {
   const { token, password } = req.body;
-  if (!token || !password) return res.status(400).json({ error: 'Token & password required' });
+  
+  // Validate that both token and password are provided
+  if (!token || !password) {
+    return res.status(400).json({ error: 'Token & password required' });
+  }
 
-  const { rows } = await pool.query(
-    'SELECT user_id, expires_at FROM password_resets WHERE token=$1',
-    [token]
-  );
-  if (!rows.length) return res.status(400).json({ error: 'Invalid token' });
+  try {
+    // Check if the token exists and retrieve the user and expiration data
+    const { rows } = await pool.query(
+      'SELECT user_id, expires_at, status FROM password_resets WHERE token=$1',
+      [token]
+    );
+    
+    if (!rows.length) {
+      return res.status(400).json({ error: 'Invalid token' });
+    }
 
-  const { user_id, expires_at } = rows[0];
-  if (new Date(expires_at) < new Date()) return res.status(400).json({ error: 'Token expired' });
+    const { user_id, expires_at, status } = rows[0];
 
-  const hash = await bcrypt.hash(password, 10);
-  await pool.query('UPDATE users SET password=$1 WHERE id=$2', [hash, user_id]);
-  await pool.query('DELETE FROM password_resets WHERE token=$1', [token]);
+    // Check if the token is expired
+    if (new Date(expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Token expired' });
+    }
 
-  res.json({ message: 'Password reset successful' });
+    // Check if the token has already been used
+    if (status === 'used') {
+      return res.status(400).json({ error: 'Token has already been used' });
+    }
+
+    // Hash the new password
+    const hash = await bcrypt.hash(password, 10);
+
+    // Update the user's password in the database
+    await pool.query('UPDATE users SET password=$1 WHERE id=$2', [hash, user_id]);
+
+    // Mark the token as used and update the reset timestamp
+    await pool.query(
+      'UPDATE password_resets SET status=$1 WHERE token=$2',
+      ['used', token]
+    );
+
+    // Optionally, delete the token from the table after use
+    // await pool.query('DELETE FROM password_resets WHERE token=$1', [token]);
+
+    res.json({ message: 'Password reset successful' });
+  } catch (err) {
+    console.error('[Password Reset Error]', err);
+    res.status(500).json({ error: 'Something went wrong. Please try again later.' });
+  }
 });
+
 
 
 module.exports = router;
