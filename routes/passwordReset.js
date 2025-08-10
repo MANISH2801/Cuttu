@@ -46,7 +46,7 @@ router.post('/request-password-reset', async (req, res) => {
     return res.status(400).json({ error: 'reCAPTCHA token is required.' });
   }
 
-  const secretKey = 'your-recaptcha-secret-key';
+  const secretKey = '6Lclc5MrAAAAADXpREb6CaedI5Ea5r5hK-336vE3';
   const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
 
   try {
