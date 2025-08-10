@@ -27,20 +27,14 @@ async function triggerPasswordReset(userId) {
       'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
       [userId, resetToken, expiresAt]
     );
-    
-    // Optionally, send a password reset email (you can adjust this part based on your needs)
-    const user = await pool.query('SELECT email FROM users WHERE id=$1', [userId]);
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;// Adjust URL as needed
 
-    // Send the reset link to the user's email (you may use a helper function to send emails)
-    await sendEmail(user.rows[0].email, 'Password Reset', resetLink);
-
-    return { success: true };
+    return { success: true };  // No email sending part now
   } catch (err) {
     console.error('[Password Reset Error]', err);
     return { success: false, error: 'Failed to trigger password reset.' };
   }
 }
+
 
 /**
  * POST /auth/request-password-reset
