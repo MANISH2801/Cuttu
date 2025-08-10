@@ -17,48 +17,45 @@ const router = express.Router();
  * Body: { email }
  */
 // POST /auth/request-password-reset
+// In your existing /request-password-reset endpoint
 router.post('/request-password-reset', async (req, res) => {
   const { email, recaptchaToken } = req.body;
 
-  // Check if the reCAPTCHA token is provided
+  // Check if reCAPTCHA token is provided
   if (!recaptchaToken) {
     return res.status(400).json({ error: 'reCAPTCHA token is required.' });
   }
 
-  // Verify reCAPTCHA token with Google's API
-  const secretKey = '6Lclc5MrAAAAADXpREb6CaedI5Ea5r5hK-336vE3';  // Use your actual secret key
+  // Verify reCAPTCHA with Google
+  const secretKey = '6Lclc5MrAAAAADXpREb6CaedI5Ea5r5hK-336vE3'; // Use your actual secret key
   const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
 
   try {
     const verifyRes = await fetch(verifyURL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
 
     const verifyData = await verifyRes.json();
 
-    // If CAPTCHA verification fails, return an error
-    if (!verifyData.success || verifyData.score < 0.5) {  // You can adjust the score threshold
+    // If CAPTCHA fails, return an error
+    if (!verifyData.success || verifyData.score < 0.5) {
       return res.status(401).json({ error: 'reCAPTCHA verification failed' });
     }
 
-    // reCAPTCHA verified, now proceed with password reset logic
+    // Check if the email exists
     const { rows } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
-    // Trigger the password reset process directly (this is where you link to your password change route)
-    // This should be a function or call to the logic you already have for password reset
     const userId = rows[0].id;
 
-    // Call your password reset function or directly trigger the change
-    const passwordResetResult = await triggerPasswordReset(userId);  // Implement this logic
+    // Call the triggerPasswordReset function to generate token and send email
+    const resetResult = await triggerPasswordReset(userId);
 
-    if (passwordResetResult.success) {
+    if (resetResult.success) {
       return res.json({ message: 'Password reset initiated. Please check your email for further instructions.' });
     } else {
-      return res.status(400).json({ error: 'Failed to initiate password reset.' });
+      return res.status(500).json({ error: resetResult.error || 'Failed to trigger password reset.' });
     }
 
   } catch (err) {
@@ -66,6 +63,7 @@ router.post('/request-password-reset', async (req, res) => {
     res.status(500).json({ error: 'Something went wrong. Please try again later.' });
   }
 });
+
 
 
 
