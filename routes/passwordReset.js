@@ -19,10 +19,10 @@ async function triggerPasswordReset(userId, email) {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60; // Convert to seconds
 
-    // Save reset token, email, and expiration time to the database
+    // Save reset token and email to the database
     await pool.query(
-      'INSERT INTO password_resets (user_id, token, expires_at, email) VALUES ($1, $2, to_timestamp($3), $4)',
-      [userId, resetToken, expiresAt, email] // Added email to the insert query
+      'INSERT INTO password_resets (user_id, email, token, expires_at) VALUES ($1, $2, $3, to_timestamp($4))',
+      [userId, email, resetToken, expiresAt]
     );
 
     return { success: true };
