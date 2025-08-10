@@ -64,7 +64,8 @@ router.post('/request-password-reset', async (req, res) => {
     const resetResult = await triggerPasswordReset(userId, email);
 
     if (resetResult.success) {
-      return res.json({ message: 'Password reset initiated. Please check your email for further instructions.' });
+      // Redirect to the reset password page with the email as a query parameter
+      return res.redirect(`/reset-password.html?email=${encodeURIComponent(email)}`);
     } else {
       return res.status(500).json({ error: resetResult.error || 'Failed to initiate password reset.' });
     }
@@ -73,6 +74,7 @@ router.post('/request-password-reset', async (req, res) => {
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
+
 
 
 
