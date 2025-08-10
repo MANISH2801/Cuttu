@@ -48,27 +48,25 @@ router.post('/request-password-reset', async (req, res) => {
     const { rows } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
-    // Generate a reset token and expiration time (30 minutes expiry)
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + 1000 * 60 * 30;
+    // Trigger the password reset process directly (this is where you link to your password change route)
+    // This should be a function or call to the logic you already have for password reset
+    const userId = rows[0].id;
 
-    // Save reset token in the database
-    await pool.query(
-      'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
-      [rows[0].id, resetToken, expiresAt]
-    );
+    // Call your password reset function or directly trigger the change
+    const passwordResetResult = await triggerPasswordReset(userId);  // Implement this logic
 
-    // Send reset link to the user’s email
-    const resetLink = `https://prep360eductech.in/reset-password?token=${resetToken}`;
-    await sendEmail(email, 'Password Reset', resetLink);
-
-    res.json({ message: 'Password reset link sent to your email.' });
+    if (passwordResetResult.success) {
+      return res.json({ message: 'Password reset initiated. Please check your email for further instructions.' });
+    } else {
+      return res.status(400).json({ error: 'Failed to initiate password reset.' });
+    }
 
   } catch (err) {
     console.error('[Password Reset Error]', err);
     res.status(500).json({ error: 'Something went wrong. Please try again later.' });
   }
 });
+
 
 
 /**
