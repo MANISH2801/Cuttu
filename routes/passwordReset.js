@@ -59,7 +59,7 @@ router.post('/request-password-reset', async (req, res) => {
     );
 
     // Send reset link to the user’s email
-    const resetLink = `https://yourdomain.com/reset-password?token=${resetToken}`;
+    const resetLink = `https://prep360eductech.in/reset-password?token=${resetToken}`;
     await sendEmail(email, 'Password Reset', resetLink);
 
     res.json({ message: 'Password reset link sent to your email.' });
