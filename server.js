@@ -23,25 +23,29 @@ const { authenticate:authMiddleware} = require('./middlewares/auth');
 const isAdmin = require('./middlewares/isAdmin');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
+
+
+const express = require('express');
 const cors = require('cors');
-
 const app = express();
-app.use(express.json());
 
-// CORS configuration
+// Configure CORS to allow only specific frontend URL (use environment variable for flexibility)
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'https://prep360eductech.in', // Ensure this matches your frontend URL
-  credentials: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Allow cookies or other credentials to be sent
+  methods: ['GET', 'POST'], // Allow only GET and POST methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers in the request
 }));
 
-// Allow pre-flight requests (OPTIONS)
-app.options('*', cors());
+// Allow pre-flight requests (OPTIONS) to avoid CORS issues with certain browsers
+app.options('*', cors()); // This will allow pre-flight checks for any route
 
-// Your routes here
+// Parse JSON request bodies
 app.use(express.json());
-app.use('/auth', require('./routes/passwordReset')); // Add your routes as needed
+
+// Add your routes here
+app.use('/auth', require('./routes/passwordReset')); // Adjust your routes as needed
+
 
 
 // ─────────── SWAGGER TAGS (top‑level) ───────────
