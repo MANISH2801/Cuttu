@@ -64,8 +64,7 @@ router.post('/request-password-reset', async (req, res) => {
     const resetResult = await triggerPasswordReset(userId, email);
 
     if (resetResult.success) {
-      // Redirect to the reset password page with the email as a query parameter
-      return res.redirect(`https://prep360eductech.in/reset-password.html?email=${encodeURIComponent(email)}`);
+      return res.json({ message: 'Password reset initiated. Please check your email for further instructions.' });
     } else {
       return res.status(500).json({ error: resetResult.error || 'Failed to initiate password reset.' });
     }
@@ -74,7 +73,6 @@ router.post('/request-password-reset', async (req, res) => {
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
-
 
 
 
