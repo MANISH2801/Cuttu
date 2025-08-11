@@ -9,6 +9,7 @@ const express = require('express');
 const pool = require('../db');
 const crypto = require('crypto');
 const router = express.Router();
+const bcrypt     = require('bcryptjs');
 
 // Function to trigger password reset
 async function triggerPasswordReset(userId, email) {
