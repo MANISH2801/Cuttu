@@ -31,7 +31,7 @@ const app = express();
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'https://prep360eductech.in', // Ensure this matches your frontend URL
   credentials: true,
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
