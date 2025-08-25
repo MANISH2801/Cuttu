@@ -262,6 +262,14 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+   // 🔒 One-Device Restriction
+    if (user.is_logged_in && user.device_id && user.device_id !== device_id) {
+      return res.status(403).json({
+        error: 'You are already logged in on another device. Please logout first.'
+      });
+    }
+
+
 // Inside /login route:
 if (!user.totp_secret) {
   const secret = speakeasy.generateSecret({ name: `Prep360 (${user.email})` });
